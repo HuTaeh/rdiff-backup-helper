@@ -186,7 +186,7 @@ function restore()
 	fi
 }
 
-function cron() {
+function cron_add() {
 	if [ -f $DIR_CONFIG/$FILE ]; then
 		echo -e "Veuillez-renseigner cette ligne comme pour un crontab."
 		echo -e "m h dom mon dow"
@@ -206,7 +206,8 @@ function cron() {
 	#--- Main ---#
 case "$MODE" in
 	-a)
-		cron ;;
+		echo -e "Quel type de modification du cron souhaité vous effectuer ?"
+		cron_add ;;
 	-re)
 		restore ;;
 	-b)
