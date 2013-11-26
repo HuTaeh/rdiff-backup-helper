@@ -1,0 +1,222 @@
+#!/bin/bash
+#=========================================#
+# Rdiff-backup-helper                     #
+#-----------------------------------------#
+# Author : Mathieu "HuTaeh"  F.           #
+# Date : 25 Nov. 2013                     #
+#-----------------------------------------#
+# Ce script permet une utilisation plus   #
+# facile du logiciel rdiff-backup         #
+#=========================================#
+
+	#--- Variables ---#
+#Parametres
+MODE=$1
+FILE=$2
+DATE=$3
+
+#Directory
+DIR_CONFIG=rdiff-backup-helper.conf.d
+DIR_BACKUP=/bkp-hutaeh/backups
+
+#Script
+VALIDATE="n"
+VALIDATE_NAME="n"
+CONTINU_CONF_DIR="y"
+i=0
+
+	#--- Functions ---#
+function help()
+{
+	echo -e "Description : ce scripts permet une utilisation plus simple du logiciel rdiff-backup."
+	echo -e "La configuration des sauvegardes et des restaurations est faite pas le biais d'un fichier de configuration par serveur."
+	echo -e "\nUtilisation : ./rdiff-backup-helper [MODE] [CONFIG_FILE] [OPTIONS]"
+	echo -e "\nMODE		Description"
+	echo -e "-b		backup"
+	echo -e "-r		restore"
+	echo -e "-a		configure crontab to make automatique backup"
+	echo -e "-l		list config file"
+	echo -e "-c		configure a new server"
+	echo -e "\nOPTIONS	Description"
+	echo -e "now		Use in restore mode to restore the last backup"
+	echo -e "xD		Use in restore mode to restore the backup x days ago"
+	echo -e "xM		Use in restore mode to restore the backup x month ago"
+}
+
+
+function list_config_file()
+{
+	if [ -d $DIR_CONFIG ]; then
+		if [ -z $(ls -A $DIR_CONFIG 2>&1) ]; then
+			echo -e "Aucun fichier de configuration trouvé."
+			echo -e "Utilisez la commande ./rdiff-backup-helper -c pour créer un nouveau fichier de configuration"
+		else
+			ls $DIR_CONFIG
+		fi
+	else
+		mkdir -p $DIR_CONFIG
+		echo -e "Aucun fichier de configuration trouvé."
+		echo -e "Utilisez la commande ./rdiff-backup-helper -c pour créer un nouveau fichier de configuration"
+	fi
+}
+
+
+function new_config_file()
+{
+	while [ $VALIDATE == "n" ]
+	do
+		clear
+		echo -e "#=====================================================#"
+		echo -e "# Assistant d'écriture des fichiers de configurations #"
+		echo -e "#=====================================================#"
+
+		echo -e "\n#--- Information serveur ---#"
+		echo -e "IP ou nom du serveur : "
+		read SERVER
+		echo -e "Port SSH de connection au serveur : "
+		read SSH_PORT
+		echo -e "Clef SSH de connection au serveur : "
+		read SSH_KEY
+		echo -e "Utilisateur de connection au serveur : "
+		read SSH_USER
+
+		echo -e "\n#--- Information de sauvegarde ---#"
+		while [ "$CONTINU_CONF_DIR" == "y" ]
+		do
+			read -p "Veuillez indiquer le répertoires à sauvegarder : " DIR_BACKUP
+			LIST_DIR_BACKUP[$i]=$DIR_BACKUP
+			((i++))
+			read -p "Voulez vous ajouter un autre répertoire ?(y/n) " -n 1 CONTINU_CONF_DIR
+			echo
+		done
+
+		echo -e "\n#--- Information de restauration ---#"
+		echo -e "Par mesure de sécurité, les répertoires et dossiers ne sont pas restauré directement dans l'arborescence."
+		echo -e "Répertoire de restauration : "
+		read DIR_RESTORE
+		clear
+
+		echo -e "#========================================#"
+		echo -e "# Génération du fichier de configuration #"
+		echo -e "#========================================#"
+
+		echo -e "\n#--- Récapitulatif ---#"
+		echo -e "Server : $SERVER"
+		echo -e "Port SSH : $SSH_PORT"
+		echo -e "Emplacement de la clef SSH : $SSH_KEY"
+		echo -e "Utilisateur de connexion : $SSH_USER"
+		echo -e "\nRépertoire(s) qui vont être sauvegardé(s) : "
+
+		for i in "${LIST_DIR_BACKUP[@]}"
+		do
+			echo -e "$i"
+		done
+		echo -e "\nRépertoire de restauration : $DIR_RESTORE"
+
+
+		echo -e "\n#--- Validation ---#"
+		read -p "Les informations précédentes sont-elles correctes ?(y/n) " -n 1 VALIDATE
+	done
+
+		echo -e "\n#--- Choix du nom du fichier de configuration ---#"
+		read -p "Le nom du fichier de configuration sera $SERVER.conf. Voulez-vous le modifier ?(y/n) " -n 1 VALIDATE_NAME
+		if [ $VALIDATE_NAME == "y" ]; then
+			echo -e "Indiquez le nom du fichier (l'extension .conf est mise automatiquement à la fin du nom)."
+			read FILE_CONFIG_NAME
+		else
+			FILE_CONFIG_NAME=$SERVER
+		fi
+
+		echo -e "server:$SERVER" > $DIR_CONFIG/$FILE_CONFIG_NAME.conf
+		echo -e "ssh_port:$SSH_PORT" >> $DIR_CONFIG/$FILE_CONFIG_NAME.conf
+		echo -e "ssh_key:$SSH_KEY" >> $DIR_CONFIG/$FILE_CONFIG_NAME.conf
+		echo -e "ssh_user:$SSH_USER" >> $DIR_CONFIG/$FILE_CONFIG_NAME.conf
+		for i in "${LIST_DIR_BACKUP[@]}"
+		do
+			echo -e "backuped_directory:$i" >> $DIR_CONFIG/$FILE_CONFIG_NAME.conf
+		done
+		echo -e "restore_directory:$DIR_RESTORE" >> $DIR_CONFIG/$FILE_CONFIG_NAME.conf
+
+		echo -e "Le fichier $DIR_CONFIG/$FILE_CONFIG_NAME.conf à été créé."
+		exit 0
+}
+
+
+function backup()
+{
+	if [ -f $DIR_CONFIG/$FILE ]; then
+		echo -e "#--- Récupération des informations dans le fichier de configuration ---#" 
+		SERVER=$(grep server $DIR_CONFIG/$FILE | cut -d':' -f2)
+		SSH_PORT=$(grep ssh_port $DIR_CONFIG/$FILE | cut -d':' -f2)
+		SSH_KEY=$(grep ssh_key $DIR_CONFIG/$FILE | cut -d':' -f2)
+		SSH_USER=$(grep ssh_user $DIR_CONFIG/$FILE | cut -d':' -f2)
+		grep backuped_directory $DIR_CONFIG/$FILE | cut -d':' -f2 > $DIR_CONFIG/$FILE.tmp
+
+		echo -e "#--- Début de la sauvegarde de $SERVER ---#"
+		rdiff-backup --remote-schema 'ssh -p '$SSH_PORT' -i '$SSH_KEY' %s rdiff-backup --server' --include-globbing-filelist $DIR_CONFIG/$FILE.tmp --exclude '**' $SSH_USER@$SERVER::/ $DIR_BACKUP/$SERVER
+		rm -f $DIR_CONFIG/$FILE.tmp
+		echo -e "FIN DE LA SAUVEGARDE"
+		exit 0
+	else
+		echo -e "Fichier de configuration introuvable."
+		echo -e "Executer ./rdiff-backup-helper -l pour connaitre la liste des fichiers de configurations disponibles"
+		exit 0
+	fi
+}
+
+
+function restore()
+{
+	if [ -f $DIR_CONFIG/$FILE ]; then
+		echo -e "#--- Récupération des informations dans le fichier de configuration ---#" 
+		SERVER=$(grep server $DIR_CONFIG/$FILE | cut -d':' -f2)
+		SSH_PORT=$(grep ssh_port $DIR_CONFIG/$FILE | cut -d':' -f2)
+		SSH_KEY=$(grep ssh_key $DIR_CONFIG/$FILE | cut -d':' -f2)
+		SSH_USER=$(grep ssh_user $DIR_CONFIG/$FILE | cut -d':' -f2)
+		DIR_RESTORE=$(grep restore_directory $DIR_CONFIG/$FILE | cut -d ":" -f2)
+
+		echo -e "#--- Début du transfert de la sauvegarde dans le dossier de restauration ---#"
+		rdiff-backup --remote-schema 'ssh -p '$SSH_PORT' -i '$SSH_KEY' %s rdiff-backup --server' -r $DATE --force $DIR_BACKUP/$SERVER $SSH_USER@$SERVER::$DIR_RESTORE
+		echo -e "#--- Fin du transfert ---#"
+		exit 0
+	else
+		echo -e "Fichier de configuration introuvable."
+		echo -e "Executer ./rdiff-backup-helper -l pour connaitre la liste des fichiers de configurations disponibles"
+		exit 0
+	fi
+}
+
+function cron() {
+	echo -e "Cette fonction n'est pas disponible. Veuillez vous référer au wiki pour lancer les sauvegardes de manières automatiques."
+	if [ -f $DIR_CONFIG/$FILE ]; then
+		echo -e "Veuillez-renseigner cette ligne comme pour un crontab."
+		echo -e "m h dom mon dow"
+		read INTERVALLE
+
+		crontab -l >  cron.tmp
+		echo -e "$INTERVALLE cd $(dirname $(readlink -f /proc/$$/fd/255)) && ./rdiff-backup-helper -b $FILE" >> cron.tmp
+		crontab cron.tmp
+		rm cron.tmp
+	else
+		echo -e "Le fichier de configuration indiquée n'existe pas."
+		echo -e "Executer ./rdiff-backup-helper -l pour connaitre la liste des fichiers de configurations disponibles"
+		exit 0
+	fi
+}
+
+	#--- Main ---#
+case "$MODE" in
+	-a)
+		cron ;;
+	-re)
+		restore ;;
+	-b)
+		backup ;;
+	-l)
+		list_config_file ;;
+	-c)
+		new_config_file	;;
+	*)
+		help ;;
+esac
+
