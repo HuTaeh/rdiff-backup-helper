@@ -3,7 +3,7 @@
 # Rdiff-backup-helper                     #
 #-----------------------------------------#
 # Author : Mathieu "HuTaeh"  F.           #
-# Date : 25 Nov. 2013                     #
+# Date : 26 Nov. 2013                     #
 #-----------------------------------------#
 # Ce script permet une utilisation plus   #
 # facile du logiciel rdiff-backup         #
@@ -187,7 +187,6 @@ function restore()
 }
 
 function cron() {
-	echo -e "Cette fonction n'est pas disponible. Veuillez vous référer au wiki pour lancer les sauvegardes de manières automatiques."
 	if [ -f $DIR_CONFIG/$FILE ]; then
 		echo -e "Veuillez-renseigner cette ligne comme pour un crontab."
 		echo -e "m h dom mon dow"
