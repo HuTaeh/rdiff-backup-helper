@@ -17,7 +17,7 @@ DATE=$3
 
 #Directory
 DIR_CONFIG=rdiff-backup-helper.conf.d
-DIR_BACKUP=/bkp-hutaeh/backups
+FILE_CONFIG=rdiff-backup-helpher.conf
 
 #Script
 VALIDATE="n"
@@ -43,6 +43,27 @@ function help()
 	echo -e "xM		Use in restore mode to restore the backup x month ago"
 }
 
+function config_rdiff-backup-helper()
+{
+    if [ -d $DIR_CONFIG ]; then
+	if [ ! -f $DIR_CONFIG/$FILE_CONFIG ]; then
+		echo -e "#===================================================#"
+		echo -e "# Assistant de configuration de rdiff-backup-helper #"
+		echo -e "#===================================================#\n"
+  
+		read -p "Veuillez indiquer le répertoire où seront stocker les sauvegardes : " DIR_BACKUP
+		echo -e "dir_backup:$DIR_BACKUP" > $DIR_CONFIG/$FILE_CONFIG
+	fi
+    else
+	mkdir $DIR_CONFIG
+	echo -e "#===================================================#"
+	echo -e "# Assistant de configuration de rdiff-backup-helper #"
+	echo -e "#===================================================#\n"
+  
+	read -p "Veuillez indiquer le répertoire où seront stocker les sauvegardes : " DIR_BACKUP
+	echo -e "dir_backup:$DIR_BACKUP" > $DIR_CONFIG/$$FILE_CONFIG
+    fi	
+}
 
 function list_config_file()
 {
@@ -146,6 +167,7 @@ function backup()
 {
 	if [ -f $DIR_CONFIG/$FILE ]; then
 		echo -e "#--- Récupération des informations dans le fichier de configuration ---#" 
+		DIR_BACKUP=$(grep dir_backup $DIR_CONFIG/$FILE_CONFIG | cut -d':' -f2)
 		SERVER=$(grep server $DIR_CONFIG/$FILE | cut -d':' -f2)
 		SSH_PORT=$(grep ssh_port $DIR_CONFIG/$FILE | cut -d':' -f2)
 		SSH_KEY=$(grep ssh_key $DIR_CONFIG/$FILE | cut -d':' -f2)
@@ -169,6 +191,7 @@ function restore()
 {
 	if [ -f $DIR_CONFIG/$FILE ]; then
 		echo -e "#--- Récupération des informations dans le fichier de configuration ---#" 
+		DIR_BACKUP=$(grep dir_backup $DIR_CONFIG/$FILE_CONFIG | cut -d':' -f2)
 		SERVER=$(grep server $DIR_CONFIG/$FILE | cut -d':' -f2)
 		SSH_PORT=$(grep ssh_port $DIR_CONFIG/$FILE | cut -d':' -f2)
 		SSH_KEY=$(grep ssh_key $DIR_CONFIG/$FILE | cut -d':' -f2)
@@ -204,6 +227,7 @@ function cron() {
 }
 
 	#--- Main ---#
+config_rdiff-backup-helper
 case "$MODE" in
 	-a)
 		cron ;;
