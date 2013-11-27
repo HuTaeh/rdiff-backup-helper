@@ -10,9 +10,9 @@ ce trouvant à cette adresse : http://rdiff-backup.nongnu.org/
 Installation
 ------------
 Télécharger le script rdiff-backup-helper et render le exécutable avec la commande suivante :
-    git clone https://github.com/HuTaeh/rdiff-backup-helper.git 
+`    git clone https://github.com/HuTaeh/rdiff-backup-helper.git 
     cd rdiff-backup-helper
-    chmod +x rdiff-backup-helper
+    chmod +x rdiff-backup-helper`
 
 Utilisation
 -----------
@@ -30,9 +30,9 @@ For more detail about rdiff-backup, please go on the official web site, at http:
 
 Install
 Download this script and make us executable.
-    git clone https://github.com/HuTaeh/rdiff-backup-helper.git
+`    git clone https://github.com/HuTaeh/rdiff-backup-helper.git
     cd rdiff-backup-helper
-    chmod +x rdiff-backup-helper
+    chmod +x rdiff-backup-helper`
 
 Use
  
